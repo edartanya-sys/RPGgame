@@ -1,0 +1,77 @@
+#include "Renderer.hpp"
+
+#include <iostream>
+
+Renderer::Renderer(AssetManager &assets)
+    : assets_{assets} {}
+
+void Renderer::drawTiles(sf::RenderWindow &window,
+                         const TileManager &tileManager) {
+    sf::Sprite sprite{assets_.getTexture(TextureID::Terrain)};
+    sprite.setScale({tileScale_, tileScale_});
+
+    for (int y = 0; y < tileManager.getHeight(); ++y) {
+        for (int x = 0; x < tileManager.getWidth(); ++x) {
+            const Tile &tile = tileManager.getTileAt(x, y);
+            if (tile.id == TileID::Empty) {
+                continue;
+            }
+            float coordX = x * tileWidth_;
+            float coordY = y * tileHeight_;
+            sprite.setPosition({coordX, coordY});
+            sprite.setTexture(
+                assets_.getTexture(tileManager.getTextureId(tile.id)));
+            sprite.setTextureRect(
+                tileManager.getTextureRect(tile.id, tile.option));
+            window.draw(sprite);
+        }
+    }
+}
+
+void Renderer::drawBounds(sf::RenderWindow &window,
+                          const TileManager &tileManager) {
+    sf::RectangleShape bounds{
+        {
+            static_cast<float>(tileManager.getWidth() * tileWidth_),
+            static_cast<float>(tileManager.getHeight() * tileHeight_)
+        }
+    };
+    bounds.setPosition({0.f, 0.f});
+    bounds.setFillColor({40, 40, 40, 100});
+    bounds.setOutlineColor({255, 80, 80});
+    bounds.setOutlineThickness(3.f);
+    window.draw(bounds);
+}
+
+void Renderer::drawLevelEditor(sf::RenderWindow &window,
+                               const TileManager &tileManager,
+                               sf::Vector2f mousePosView) {
+    float x = std::floor(mousePosView.x / tileWidth_);
+    float y = std::floor(mousePosView.y / tileHeight_);
+    Tile tile;
+    tile.id = tileManager.tileGroupOption_;
+    tile.option = tileManager.tileOption_;
+    sf::Sprite sprite(
+        assets_.getTexture(
+            tileManager.tileGroups_[math::toIndex(tile.id)].texture));
+    sprite.setTextureRect(tileManager.getTextureRect(tile.id, tile.option));
+
+    sprite.setScale({tileScale_, tileScale_});
+    sprite.setOrigin({baseWidth_ / 2.f, baseHeight_ / 2.f});
+    sprite.setPosition({
+        x * tileWidth_ + tileWidth_ / 2, y * tileHeight_ + tileHeight_ / 2
+    });
+    window.draw(sprite);
+}
+
+void Renderer::drawEntities(sf::RenderWindow &window, World &world) {
+    auto &sprites = world.storage<SpriteComponent>();
+    auto &positions = world.storage<Position>();
+
+    for (std::uint32_t i = 0; i < sprites.getSize(); i++) {
+        Entity entity = sprites.getEntityAt(i);
+        SpriteComponent &sprite = sprites.get(entity);
+        sprite.sprite.setPosition(positions.get(entity).value);
+        window.draw(sprite.sprite);
+    }
+}
