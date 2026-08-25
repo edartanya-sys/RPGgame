@@ -9,10 +9,13 @@ set(SFML_LIB "${CMAKE_CURRENT_SOURCE_DIR}/SFML/lib")
 add_executable(RPGgame
         src/main.cpp
         src/Game.cpp
-        src/Entity.cpp
+        src/World.cpp
         src/AssetManager.cpp
         src/MathFunctions.cpp
         src/TileManager.cpp
+        src/Renderer.cpp
+        src/ComponentStorage.cpp
+        src/MovementSystem.cpp
 )
 
 target_include_directories(RPGgame PRIVATE

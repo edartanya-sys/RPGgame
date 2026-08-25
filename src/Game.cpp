@@ -1,59 +1,35 @@
-#include "Game.hpp"
-#include "MathFunctions.hpp"
-#include <iostream>
 #include <fstream>
+#include <random>
+#include <iostream>
+#include "Game.hpp"
+#include "Components.hpp"
+#include "MovementSystem.hpp"
+#include "MathFunctions.hpp"
 
-#include "Entity.hpp"
-
-Game::Game()
-    : window_(sf::VideoMode({1600, 1080}), "Soslo")
-    , assetManager_{}
-    , playerTexture_(assetManager_.getTexture(TextureID::Player))
-    , player_(playerTexture_)
-    , tileData_(toIndex(TileID::Count)) {
+Game::Game() : window_(sf::VideoMode({1600, 1080}), "Soslo") {
 
     window_.setFramerateLimit(120);
-    player_.setOrigin({24.f, 24.f});
-    player_.setScale({scale_, scale_});
-    player_.setSpeed(500.f);
-    player_.physicsData_.type = Entity::PhysicsData::Dynamic;
-
     camera_.setSize({1600, 1080});
-    camera_.setCenter(player_.getPosition());
-
-    TileInfo tile;
-    tile.texture = TextureID::Terrain;
-    tile.rect.resize(9);
-    tile.solid = false;
-    for (int y = 0; y < 3; y++) {
-        for (int x = 0; x < 3; x++) {
-            tile.rect[x + y * 3] = {{x * 16, y * 16}, {16, 16}};
-        }
-    }
-    tileData_[toIndex(TileID::Grass)] = tile;
-
-    tileWidth_ = baseWidth_ * tileScale_;
-    tileHeight_ = baseHeight_ * tileScale_;
-
-    loadMapFromFile("level1.map");
-    allEntities_.push_back(&player_);
+    tileManager_.loadMapFromFile("level1.map");
 }
 
 void Game::run() {
     sf::Clock clock;
+    initWorld();
 
     while (window_.isOpen()) {
         HandleInput();
 
-        float deltaTime = clock.restart().asSeconds();
+        float dt = clock.restart().asSeconds();
         switch (gameMode_) {
             case GameMode::Play:
-                updatePlay(deltaTime);
+                updatePlay(dt);
                 break;
             case GameMode::LevelEditor:
-                updateLevelEditor(deltaTime);
+                updateLevelEditor(dt);
                 break;
         }
+
         draw();
     }
 }
@@ -64,68 +40,55 @@ void Game::draw() {
     mousePosWindow_ = sf::Mouse::getPosition(window_);
     mousePosView_ = window_.mapPixelToCoords(mousePosWindow_);
 
-    sf::Vector2i offset = {tileWidth_ / 2, tileHeight_ / 2};
-    sf::Sprite sprite(assetManager_.getTexture(TextureID::Terrain));
-    sprite.setScale({tileScale_, tileScale_});
-    sprite.setOrigin({baseWidth_ / 2.f, baseHeight_ / 2.f});
-    for (const Tile &tile : tileStates_) {
-        const TileInfo &info = tileData_[toIndex(tile.id)];
-        sprite.setTextureRect(info.rect[tile.variant]);
-        sf::Vector2f pos = static_cast<sf::Vector2f>(tile.position * tileWidth_ + offset);
-        sprite.setPosition(pos);
-        window_.draw(sprite);
-    }
+    renderer_.drawBounds(window_, tileManager_);
+    renderer_.drawTiles(window_, tileManager_);
 
     switch (gameMode_) {
         case GameMode::Play:
             break;
         case GameMode::LevelEditor:
-            drawLevelEditor();
+            renderer_.drawLevelEditor(window_, tileManager_, mousePosView_);
             break;
     }
 
-    // Render Game
-
-    window_.draw(player_);
-
+    renderer_.drawEntities(window_, world_);
     window_.setView(window_.getDefaultView());
-
-    // Render UI
 
     window_.display();
 }
 
-void Game::drawLevelEditor() {
-    float x = std::floor(mousePosView_.x / tileWidth_);
-    float y = std::floor(mousePosView_.y / tileHeight_);
-    const TileInfo &info = tileData_[toIndex(TileID::Grass)];
-    sf::Sprite sprite(assetManager_.getTexture(info.texture));
-    sprite.setTextureRect(info.rect[tileOptionIdx_]);
-    sprite.setScale({tileScale_, tileScale_});
-    sprite.setOrigin({baseWidth_ / 2.f, baseHeight_ / 2.f});
-    sprite.setPosition({
-        x * tileWidth_ + tileWidth_ / 2, y * tileHeight_ + tileHeight_ / 2
-    });
-    window_.draw(sprite);
-}
-
-void Game::updatePlay(float deltaTime) {
-    updatePhysics(deltaTime);
-}
-
-void Game::updateLevelEditor(float deltaTime) {
-    camera_.move(playerVelocity_ * 900.f * deltaTime);
-}
-
-void Game::updatePhysics(float deltaTime) {
-    for (Entity* &entity : allEntities_) {
-        if (entity->physicsData_.type == Entity::PhysicsData::Dynamic) {
-            entity->move(
-                playerVelocity_ * entity->physicsData_.speed * deltaTime,
-                camera_);
-            // TODO check collisions
-        }
+namespace {
+    Entity getPlayer(World &world) {
+        auto& players = world.storage<Player>();
+        assert(players.getSize() == 1);
+        return players.getEntityAt(0);
     }
+}
+
+void Game::initWorld() {
+    const sf::Texture &playerTexture = assetManager_.getTexture(TextureID::Player);
+    sf::Sprite playerSprite{playerTexture};
+    playerSprite.setScale({5.f, 5.f});
+    auto bounds = playerSprite.getLocalBounds();
+    playerSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
+    Entity player = world_.create();
+    world_.addComponent(player, SpriteComponent{playerSprite});
+    world_.addComponent(player, Position{{200.f, 100.f}});
+    world_.addComponent(player, Player{});
+    world_.addComponent(player, Velocity{{0.f, 0.f}, 500.f});
+    camera_.setCenter(world_.storage<Position>().get(player).value);
+}
+
+void Game::updatePlay(float dt) {
+    systems::updateMovement(world_, dt);
+    Entity player = getPlayer(world_);
+    sf::Sprite &s = world_.storage<SpriteComponent>().get(player).sprite;
+    s.setPosition(world_.storage<Position>().get(player).value);
+    camera_.setCenter(s.getPosition());
+}
+
+void Game::updateLevelEditor(float dt) {
+    // camera_.move({90.f * dt, 90.f * dt});
 }
 
 void Game::HandleInput() {
@@ -146,19 +109,39 @@ void Game::HandleInput() {
             }
         }
         if (const auto *key = event->getIf<sf::Event::KeyPressed>()) {
-            if (key->scancode == sf::Keyboard::Scancode::T) {
-                if (gameMode_ == GameMode::Play) {
-                    gameMode_ = GameMode::LevelEditor;
+            switch (key->scancode) {
+                case sf::Keyboard::Scancode::T: {
+                    if (gameMode_ == GameMode::Play) {
+                        gameMode_ = GameMode::LevelEditor;
+                    }
+                    else if (gameMode_ == GameMode::LevelEditor) {
+                        gameMode_ = GameMode::Play;
+                    }
+                    break;
                 }
-                else if (gameMode_ == GameMode::LevelEditor) {
-                    camera_.setCenter(player_.getPosition());
-                    gameMode_ = GameMode::Play;
+                case sf::Keyboard::Scancode::O: {
+                    if (gameMode_ == GameMode::LevelEditor) {
+                        tileManager_.saveMapToFile("level1.map");
+                    }
+                    break;
                 }
-            }
-            else if (key->scancode == sf::Keyboard::Scancode::O) {
-                if (gameMode_ == GameMode::LevelEditor) {
-                    saveMapToFile("level1.map");
+                case sf::Keyboard::Scancode::Num1:
+                case sf::Keyboard::Scancode::Num2:
+                case sf::Keyboard::Scancode::Num3:
+                case sf::Keyboard::Scancode::Num4:
+                case sf::Keyboard::Scancode::Num5:
+                case sf::Keyboard::Scancode::Num6:
+                case sf::Keyboard::Scancode::Num7:
+                case sf::Keyboard::Scancode::Num8:
+                case sf::Keyboard::Scancode::Num9:
+                case sf::Keyboard::Scancode::Num0: {
+                    tileManager_.tileGroupOption_ = static_cast<TileID>((math::toIndex(key->scancode) - 26));
+                    tileManager_.tileOption_ = 0;
                 }
+                break;
+
+                default:
+                    break;
             }
         }
     }
@@ -174,120 +157,34 @@ void Game::HandleInput() {
 }
 
 void Game::handlePlayInput() {
+
     sf::Vector2f velocity = {0.f, 0.f};
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::W)) {
+        velocity.y -= 1.f;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::S)) {
+        velocity.y += 1.f;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::A)) {
+        velocity.x -= 1.f;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::D)) {
+        velocity.x += 1.f;
+    }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
-        velocity += {0.f, -1.f};
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
-        velocity += {0.f, 1.f};
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
-        velocity += {1.f, 0.f};
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
-        velocity += {-1.f, 0.f};
-    }
-
-    playerVelocity_ = math::normalize(velocity);
+    Entity player = getPlayer(world_);
+    world_.storage<Velocity>().get(player).vector = velocity;
 }
 
 void Game::handleLevelEditorInput() {
-    if (scrollWheelInput_ == ScrollWheelInput::Up) {
-        tileOptionIdx_++;
-        if (tileOptionIdx_ >= 9) {
-            tileOptionIdx_ = 0;
-        }
-    }
-    else if (scrollWheelInput_ == ScrollWheelInput::Down) {
-        tileOptionIdx_--;
-        if (tileOptionIdx_ < 0) {
-            tileOptionIdx_ = 8;
-        }
-    }
+    tileManager_.changeTileOption(math::toIndex(scrollWheelInput_));
 
     int x = std::floor(mousePosView_.x / tileWidth_);
     int y = std::floor(mousePosView_.y / tileHeight_);
     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-        createTile(x, y);
+        tileManager_.createTile(x, y);
     }
     else if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
-        deleteTile(x, y);
+        tileManager_.deleteTile(x, y);
     }
-
-    sf::Vector2f velocity = {0.f, 0.f};
-
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
-        velocity += {0.f, -1.f};
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
-        velocity += {0.f, 1.f};
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
-        velocity += {1.f, 0.f};
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
-        velocity += {-1.f, 0.f};
-    }
-
-    playerVelocity_ = math::normalize(velocity);
-}
-
-void Game::createTile(int x, int y) {
-    sf::Vector2i coords = {x, y};
-    Tile tile{TileID::Grass, tileOptionIdx_, coords};
-    for (size_t i = 0; i < tileStates_.size(); i++) {
-        if (tileStates_[i].position == tile.position) {
-            tileStates_[i] = tileStates_.back();
-            tileStates_.pop_back();
-            break;
-        }
-    }
-
-    tileStates_.push_back(tile);
-}
-
-void Game::deleteTile(int x, int y) {
-    sf::Vector2i tileToDeletePos = {x, y};
-    for (size_t i = 0; i < tileStates_.size(); i++) {
-        if (tileStates_[i].position == tileToDeletePos) {
-            tileStates_[i] = tileStates_.back();
-            tileStates_.pop_back();
-            return;
-        }
-    }
-}
-
-void Game::saveMapToFile(const std::string &filename) {
-    std::ofstream level{"../resources/levels/" + filename, std::ios::binary};
-    if (!level.is_open()) {
-        throw std::ios_base::failure("Couldn't open file\n");
-    }
-
-    size_t size = tileStates_.size();
-    level.write(reinterpret_cast<const char *>(&size), sizeof(size));
-    if (size > 0) {
-        level.write(reinterpret_cast<const char *>(tileStates_.data()),
-                    size * sizeof(Tile));
-    }
-}
-
-void Game::loadMapFromFile(const std::string &filename) {
-    std::ifstream level{"../resources/levels/" + filename, std::ios::binary};
-    if (!level.is_open()) {
-        throw std::ios_base::failure("Couldn't open file\n");
-    }
-
-    size_t size;
-    level.read(reinterpret_cast<char *>(&size), sizeof(size));
-    if (size > 0) {
-        tileStates_.resize(size);
-        level.read(reinterpret_cast<char *>(tileStates_.data()),
-                   size * sizeof(Tile));
-    }
-}
-
-template<typename T> requires std::is_enum_v<T>
-constexpr size_t Game::toIndex(T id) {
-    return static_cast<size_t>(id);
 }
