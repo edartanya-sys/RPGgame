@@ -1,7 +1,6 @@
 #include "MathFunctions.hpp"
 
 namespace math {
-
     float computeVectorLength(sf::Vector2f vector) {
         return std::sqrt(vector.x * vector.x + vector.y * vector.y);
     }
@@ -15,5 +14,4 @@ namespace math {
         vector.y /= length;
         return vector;
     }
-
 }
