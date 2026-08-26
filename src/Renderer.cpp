@@ -67,11 +67,30 @@ void Renderer::drawLevelEditor(sf::RenderWindow &window,
 void Renderer::drawEntities(sf::RenderWindow &window, World &world) {
     auto &sprites = world.storage<SpriteComponent>();
     auto &positions = world.storage<Position>();
+    sf::Font a{"../resources/fonts/times.ttf"};
+    sf::Text healthText{a};
+    healthText.setCharacterSize(80);
+    healthText.setFillColor(sf::Color::Red);
 
     for (std::uint32_t i = 0; i < sprites.getSize(); i++) {
         Entity entity = sprites.getEntityAt(i);
+        if (world.storage<Player>().has(entity)) {
+            int health = world.storage<HealthComponent>().get(entity).value;
+            healthText.setString(std::to_string(health));
+            healthText.setPosition(world.storage<Position>().get(entity).value - sf::Vector2f{800.f, 540.f});
+        }
+        sf::RectangleShape box;
+        if (world.storage<Collider>().has(entity)) {
+            auto &collider = world.storage<Collider>().get(entity).rect;
+            box.setSize({collider.size.x, collider.size.y});
+            box.setPosition({positions.get(entity).value.x + collider.position.x,
+                             positions.get(entity).value.y + collider.position.y});
+            box.setFillColor({255, 0, 0, 80});
+        }
         SpriteComponent &sprite = sprites.get(entity);
         sprite.sprite.setPosition(positions.get(entity).value);
         window.draw(sprite.sprite);
+        window.draw(healthText);
+        window.draw(box);
     }
 }

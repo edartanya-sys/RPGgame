@@ -12,7 +12,7 @@ struct Velocity {
 };
 
 struct Collider {
-    sf::Vector2f size;
+    sf::FloatRect rect;
 };
 
 struct SpriteComponent {
@@ -20,3 +20,16 @@ struct SpriteComponent {
 };
 
 struct Player {};
+
+struct Enemy {};
+
+struct ChaseComponent {};
+
+struct PatrolComponent {
+    sf::Vector2f point1;
+    sf::Vector2f point2;
+};
+
+struct HealthComponent {
+    int value;
+};

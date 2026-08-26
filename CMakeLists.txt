@@ -16,6 +16,8 @@ add_executable(RPGgame
         src/Renderer.cpp
         src/ComponentStorage.cpp
         src/MovementSystem.cpp
+        src/EnemyAISystem.cpp
+        src/CollisionSystem.cpp
 )
 
 target_include_directories(RPGgame PRIVATE

@@ -64,6 +64,18 @@ ComponentStorage<T>& World::storage() {
     else if constexpr (std::is_same_v<T, Player>) {
         return controllables_;
     }
+    else if constexpr (std::is_same_v<T, Enemy>) {
+        return enemies_;
+    }
+    else if constexpr (std::is_same_v<T, ChaseComponent>) {
+        return chaseComponents_;
+    }
+    else if constexpr (std::is_same_v<T, PatrolComponent>) {
+        return patrolComponents_;
+    }
+    else if constexpr (std::is_same_v<T, HealthComponent>) {
+        return healths_;
+    }
     else {
         static_assert(alwaysFalse<T>, "This component type is not registered in World");
     }
@@ -74,3 +86,7 @@ template void World::addComponent<Velocity>(Entity, Velocity);
 template void World::addComponent<SpriteComponent>(Entity, SpriteComponent);
 template void World::addComponent<Collider>(Entity, Collider);
 template void World::addComponent<Player>(Entity, Player);
+template void World::addComponent<Enemy>(Entity, Enemy);
+template void World::addComponent<ChaseComponent>(Entity, ChaseComponent);
+template void World::addComponent<PatrolComponent>(Entity, PatrolComponent);
+template void World::addComponent<HealthComponent>(Entity, HealthComponent);

@@ -2,7 +2,10 @@
 #include <random>
 #include <iostream>
 #include "Game.hpp"
+
+#include "CollisionSystem.hpp"
 #include "Components.hpp"
+#include "EnemyAISystem.hpp"
 #include "MovementSystem.hpp"
 #include "MathFunctions.hpp"
 
@@ -52,6 +55,7 @@ void Game::draw() {
     }
 
     renderer_.drawEntities(window_, world_);
+
     window_.setView(window_.getDefaultView());
 
     window_.display();
@@ -68,7 +72,8 @@ namespace {
 void Game::initWorld() {
     const sf::Texture &playerTexture = assetManager_.getTexture(TextureID::Player);
     sf::Sprite playerSprite{playerTexture};
-    playerSprite.setScale({5.f, 5.f});
+    sf::Vector2f scale = {5.f, 5.f};
+    playerSprite.setScale(scale);
     auto bounds = playerSprite.getLocalBounds();
     playerSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
     Entity player = world_.create();
@@ -76,15 +81,31 @@ void Game::initWorld() {
     world_.addComponent(player, Position{{200.f, 100.f}});
     world_.addComponent(player, Player{});
     world_.addComponent(player, Velocity{{0.f, 0.f}, 500.f});
+    world_.addComponent(player, HealthComponent{100});
+    sf::Vector2f size{bounds.size.x * scale.x * 0.3f, bounds.size.y * scale.y * 0.6f};
+    sf::Vector2f offset{-size.x / 2.f, -size.y / 2.f};
+    world_.addComponent(player, Collider{sf::FloatRect{offset, size}});
     camera_.setCenter(world_.storage<Position>().get(player).value);
+
+    const sf::Texture &ratTexture = assetManager_.getTexture(TextureID::Rat);
+    sf::Sprite ratSprite{ratTexture};
+    ratSprite.setScale({7.f, 7.f});
+    bounds = ratSprite.getLocalBounds();
+    ratSprite.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
+    Entity rat = world_.create();
+    world_.addComponent(rat, SpriteComponent{ratSprite});
+    world_.addComponent(rat, Position{{500.f, 400.f}});
+    world_.addComponent(rat, Velocity{{0.f, 0.f}, 400.f});
+    world_.addComponent(rat, Enemy{});
+    world_.addComponent(rat, ChaseComponent{});
 }
 
 void Game::updatePlay(float dt) {
+    systems::updateEnemyAI(world_);
+    auto collisions = systems::updateCollisions(world_);
     systems::updateMovement(world_, dt);
     Entity player = getPlayer(world_);
-    sf::Sprite &s = world_.storage<SpriteComponent>().get(player).sprite;
-    s.setPosition(world_.storage<Position>().get(player).value);
-    camera_.setCenter(s.getPosition());
+    camera_.setCenter(world_.storage<Position>().get(player).value);
 }
 
 void Game::updateLevelEditor(float dt) {

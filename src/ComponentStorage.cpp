@@ -52,3 +52,7 @@ template class ComponentStorage<Velocity>;
 template class ComponentStorage<Collider>;
 template class ComponentStorage<SpriteComponent>;
 template class ComponentStorage<Player>;
+template class ComponentStorage<Enemy>;
+template class ComponentStorage<ChaseComponent>;
+template class ComponentStorage<PatrolComponent>;
+template class ComponentStorage<HealthComponent>;

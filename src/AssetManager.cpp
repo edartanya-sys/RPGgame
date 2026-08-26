@@ -5,6 +5,7 @@ AssetManager::AssetManager()
     bool ok;
     ok = tileSets_[static_cast<size_t>(TextureID::Terrain)].loadFromFile("../resources/tiles/terrain.png");
     ok = tileSets_[static_cast<size_t>(TextureID::Player)].loadFromFile("../resources/Entities/cat.png");
+    ok = tileSets_[static_cast<size_t>(TextureID::Rat)].loadFromFile("../resources/Entities/rat.png");
 }
 
 const sf::Texture& AssetManager::getTexture(TextureID id) const {

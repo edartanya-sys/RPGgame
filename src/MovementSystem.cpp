@@ -1,5 +1,4 @@
 #include "MovementSystem.hpp"
-
 #include "World.hpp"
 #include "Components.hpp"
 
@@ -9,7 +8,9 @@ namespace systems {
         auto &positions = world.storage<Position>();
         auto &velocities = world.storage<Velocity>();
 
-        for (std::uint32_t i = 0; i < positions.getSize(); ++i) {
+        using std::uint32_t;
+
+        for (uint32_t i = 0; i < positions.getSize(); ++i) {
             Entity entity = positions.getEntityAt(i);
             if (!velocities.has(entity)) {
                 continue;

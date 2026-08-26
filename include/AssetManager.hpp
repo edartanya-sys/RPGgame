@@ -4,6 +4,7 @@
 enum class TextureID {
     Terrain,
     Player,
+    Rat,
     Count
 };
 
