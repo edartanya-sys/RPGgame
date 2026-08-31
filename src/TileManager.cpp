@@ -4,7 +4,7 @@
 #include <iostream>
 
 TileManager::TileManager()
-    : tiles_(matrixWidth_ * matrixHeight_, Tile{}) {
+    : tiles_(gridWidth_ * gridHeight_, Tile{}) {
     tileGroups_ = {
         {
             {TextureID::Terrain, {2, 2}, {0, 0}, false},
@@ -17,18 +17,18 @@ TileManager::TileManager()
     int cursorY = 0;
     for (auto &g : tileGroups_) {
         g.offset.y = cursorY;
-        cursorY += g.gridSize.y * tileSize_;
+        cursorY += g.gridSize.y * baseSize_;
     }
 }
 
 void TileManager::createTile(int x, int y) {
     if (x < 0 || y < 0) return;
-    tiles_[y * matrixWidth_ + x ] = {tileGroupOption_, tileOption_};
+    tiles_[y * gridWidth_ + x] = {tileGroupOption_, tileOption_};
 }
 
 void TileManager::deleteTile(int x, int y) {
     if (x < 0 || y < 0) return;
-    tiles_[y * matrixWidth_ + x].id = TileID::Empty;
+    tiles_[y * gridWidth_ + x].id = TileID::Empty;
 }
 
 sf::IntRect TileManager::getTextureRect(TileID id, int option) const {
@@ -39,26 +39,38 @@ sf::IntRect TileManager::getTextureRect(TileID id, int option) const {
 
     return {
         {
-            group.offset.x + localX * tileSize_,
-            group.offset.y + localY * tileSize_,
+            group.offset.x + localX * baseSize_,
+            group.offset.y + localY * baseSize_,
         },
         {
-            tileSize_,
-            tileSize_
+            baseSize_,
+            baseSize_
         }
     };
 }
 
 Tile TileManager::getTileAt(int x, int y) const {
-    return tiles_[y * matrixWidth_ + x];
+    return tiles_[y * gridWidth_ + x];
 }
 
-int TileManager::getWidth() const {
-    return matrixWidth_;
+int TileManager::getGridWidth() const {
+    return gridWidth_;
 }
 
-int TileManager::getHeight() const {
-    return matrixHeight_;
+int TileManager::getGridHeight() const {
+    return gridHeight_;
+}
+
+float TileManager::getTileScale() const {
+    return tileScale_;
+}
+
+int TileManager::getTileSize() const {
+    return tileSize_;
+}
+
+int TileManager::getBaseSize() const {
+    return baseSize_;
 }
 
 void TileManager::saveMapToFile(const std::string &filename) {

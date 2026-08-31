@@ -1,16 +1,17 @@
-#include <fstream>
 #include <random>
-#include <iostream>
+// #include <iostream>
 #include "Game.hpp"
 
 #include "CollisionSystem.hpp"
+#include "CombatSystem.hpp"
 #include "Components.hpp"
 #include "EnemyAISystem.hpp"
 #include "MovementSystem.hpp"
 #include "MathFunctions.hpp"
 
-Game::Game() : window_(sf::VideoMode({1600, 1080}), "Soslo") {
-
+Game::Game()
+    : window_(sf::VideoMode({1600, 1080}), "Soslo")
+    , renderer_{assetManager_, tileManager_.getTileScale(), tileManager_.getBaseSize()} {
     window_.setFramerateLimit(120);
     camera_.setSize({1600, 1080});
     tileManager_.loadMapFromFile("level1.map");
@@ -39,7 +40,7 @@ void Game::run() {
 
 void Game::draw() {
     window_.clear({80, 80, 80});
-    window_.setView(camera_);
+    window_.setView(camera_.getView());
     mousePosWindow_ = sf::Mouse::getPosition(window_);
     mousePosView_ = window_.mapPixelToCoords(mousePosWindow_);
 
@@ -58,19 +59,22 @@ void Game::draw() {
 
     window_.setView(window_.getDefaultView());
 
+    // renderer_.drawUI(window_, world_);
+
     window_.display();
 }
 
 namespace {
     Entity getPlayer(World &world) {
-        auto& players = world.storage<Player>();
+        auto &players = world.storage<Player>();
         assert(players.getSize() == 1);
         return players.getEntityAt(0);
     }
 }
 
 void Game::initWorld() {
-    const sf::Texture &playerTexture = assetManager_.getTexture(TextureID::Player);
+    const sf::Texture &playerTexture = assetManager_.getTexture(
+        TextureID::Player);
     sf::Sprite playerSprite{playerTexture};
     sf::Vector2f scale = {5.f, 5.f};
     playerSprite.setScale(scale);
@@ -80,9 +84,11 @@ void Game::initWorld() {
     world_.addComponent(player, SpriteComponent{playerSprite});
     world_.addComponent(player, Position{{200.f, 100.f}});
     world_.addComponent(player, Player{});
-    world_.addComponent(player, Velocity{{0.f, 0.f}, 500.f});
+    world_.addComponent(player, Velocity{{0.f, 0.f}, 5000.f});
     world_.addComponent(player, HealthComponent{100});
-    sf::Vector2f size{bounds.size.x * scale.x * 0.3f, bounds.size.y * scale.y * 0.6f};
+    sf::Vector2f size{
+        bounds.size.x * scale.x * 0.3f, bounds.size.y * scale.y * 0.6f
+    };
     sf::Vector2f offset{-size.x / 2.f, -size.y / 2.f};
     world_.addComponent(player, Collider{sf::FloatRect{offset, size}});
     camera_.setCenter(world_.storage<Position>().get(player).value);
@@ -98,18 +104,28 @@ void Game::initWorld() {
     world_.addComponent(rat, Velocity{{0.f, 0.f}, 400.f});
     world_.addComponent(rat, Enemy{});
     world_.addComponent(rat, ChaseComponent{});
+    size = {bounds.size.x * scale.x, bounds.size.y * scale.y};
+    offset = {-size.x / 2.f, -size.y / 2.f};
+    world_.addComponent(rat, Collider{sf::FloatRect{offset, size}});
 }
 
 void Game::updatePlay(float dt) {
     systems::updateEnemyAI(world_);
     auto collisions = systems::updateCollisions(world_);
+    systems::updateCombat(world_, collisions);
+    systems::updateInvulnerability(world_, dt);
     systems::updateMovement(world_, dt);
     Entity player = getPlayer(world_);
-    camera_.setCenter(world_.storage<Position>().get(player).value);
+    sf::Vector2f windowHalfSize = static_cast<sf::Vector2f>(window_.getSize()) / 2.f;
+    sf::Vector2f windowBounds = {
+        tileManager_.getTileSize() * tileManager_.getGridWidth() - windowHalfSize.x,
+        tileManager_.getTileSize() * tileManager_.getGridHeight() - windowHalfSize.y
+    };
+    camera_.update(windowBounds, windowHalfSize, world_.storage<Position>().get(player).value);
 }
 
 void Game::updateLevelEditor(float dt) {
-    // camera_.move({90.f * dt, 90.f * dt});
+    camera_.move(cameraMovement_ * dt * 700.f);
 }
 
 void Game::HandleInput() {
@@ -156,7 +172,8 @@ void Game::HandleInput() {
                 case sf::Keyboard::Scancode::Num8:
                 case sf::Keyboard::Scancode::Num9:
                 case sf::Keyboard::Scancode::Num0: {
-                    tileManager_.tileGroupOption_ = static_cast<TileID>((math::toIndex(key->scancode) - 26));
+                    tileManager_.tileGroupOption_ = static_cast<TileID>((
+                        math::toIndex(key->scancode) - 26));
                     tileManager_.tileOption_ = 0;
                 }
                 break;
@@ -178,7 +195,6 @@ void Game::HandleInput() {
 }
 
 void Game::handlePlayInput() {
-
     sf::Vector2f velocity = {0.f, 0.f};
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::W)) {
         velocity.y -= 1.f;
@@ -199,9 +215,22 @@ void Game::handlePlayInput() {
 
 void Game::handleLevelEditorInput() {
     tileManager_.changeTileOption(math::toIndex(scrollWheelInput_));
+    cameraMovement_ = {0.f, 0.f};
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::W)) {
+        cameraMovement_.y -= 1.f;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::S)) {
+        cameraMovement_.y += 1.f;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::A)) {
+        cameraMovement_.x -= 1.f;
+    }
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::D)) {
+        cameraMovement_.x += 1.f;
+    }
 
-    int x = std::floor(mousePosView_.x / tileWidth_);
-    int y = std::floor(mousePosView_.y / tileHeight_);
+    int x = std::floor(mousePosView_.x / tileManager_.getTileSize());
+    int y = std::floor(mousePosView_.y / tileManager_.getTileSize());
     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
         tileManager_.createTile(x, y);
     }

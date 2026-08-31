@@ -1,23 +1,27 @@
 #include "Renderer.hpp"
+#include <cassert>
 
-#include <iostream>
-
-Renderer::Renderer(AssetManager &assets)
-    : assets_{assets} {}
+Renderer::Renderer(AssetManager &assets, float tileScale, int baseSize)
+    : assets_{assets}
+    , tileScale_{tileScale}
+    , baseSize_{baseSize} {
+    tileSize_ = baseSize_ * tileScale_;
+    assert(tileScale_ > 0 && baseSize_ > 0);
+}
 
 void Renderer::drawTiles(sf::RenderWindow &window,
                          const TileManager &tileManager) {
     sf::Sprite sprite{assets_.getTexture(TextureID::Terrain)};
     sprite.setScale({tileScale_, tileScale_});
 
-    for (int y = 0; y < tileManager.getHeight(); ++y) {
-        for (int x = 0; x < tileManager.getWidth(); ++x) {
+    for (int y = 0; y < tileManager.getGridHeight(); ++y) {
+        for (int x = 0; x < tileManager.getGridWidth(); ++x) {
             const Tile &tile = tileManager.getTileAt(x, y);
             if (tile.id == TileID::Empty) {
                 continue;
             }
-            float coordX = x * tileWidth_;
-            float coordY = y * tileHeight_;
+            float coordX = x * tileSize_;
+            float coordY = y * tileSize_;
             sprite.setPosition({coordX, coordY});
             sprite.setTexture(
                 assets_.getTexture(tileManager.getTextureId(tile.id)));
@@ -32,8 +36,8 @@ void Renderer::drawBounds(sf::RenderWindow &window,
                           const TileManager &tileManager) {
     sf::RectangleShape bounds{
         {
-            static_cast<float>(tileManager.getWidth() * tileWidth_),
-            static_cast<float>(tileManager.getHeight() * tileHeight_)
+            static_cast<float>(tileManager.getGridWidth() * tileSize_),
+            static_cast<float>(tileManager.getGridHeight() * tileSize_)
         }
     };
     bounds.setPosition({0.f, 0.f});
@@ -46,8 +50,8 @@ void Renderer::drawBounds(sf::RenderWindow &window,
 void Renderer::drawLevelEditor(sf::RenderWindow &window,
                                const TileManager &tileManager,
                                sf::Vector2f mousePosView) {
-    float x = std::floor(mousePosView.x / tileWidth_);
-    float y = std::floor(mousePosView.y / tileHeight_);
+    float x = std::floor(mousePosView.x / tileSize_);
+    float y = std::floor(mousePosView.y / tileSize_);
     Tile tile;
     tile.id = tileManager.tileGroupOption_;
     tile.option = tileManager.tileOption_;
@@ -57,9 +61,9 @@ void Renderer::drawLevelEditor(sf::RenderWindow &window,
     sprite.setTextureRect(tileManager.getTextureRect(tile.id, tile.option));
 
     sprite.setScale({tileScale_, tileScale_});
-    sprite.setOrigin({baseWidth_ / 2.f, baseHeight_ / 2.f});
+    sprite.setOrigin({baseSize_ / 2.f, baseSize_ / 2.f});
     sprite.setPosition({
-        x * tileWidth_ + tileWidth_ / 2, y * tileHeight_ + tileHeight_ / 2
+        x * tileSize_ + tileSize_ / 2, y * tileSize_ + tileSize_ / 2
     });
     window.draw(sprite);
 }
@@ -72,7 +76,7 @@ void Renderer::drawEntities(sf::RenderWindow &window, World &world) {
     healthText.setCharacterSize(80);
     healthText.setFillColor(sf::Color::Red);
 
-    for (std::uint32_t i = 0; i < sprites.getSize(); i++) {
+    for (std::uint32_t i = 0; i < sprites.getSize(); ++i) {
         Entity entity = sprites.getEntityAt(i);
         if (world.storage<Player>().has(entity)) {
             int health = world.storage<HealthComponent>().get(entity).value;

@@ -29,8 +29,11 @@ public:
     TextureID getTextureId(TileID tile) const;
     sf::IntRect getTextureRect(TileID id, int option) const;
     Tile getTileAt(int x, int y) const;
-    int getWidth() const;
-    int getHeight() const;
+    int getGridWidth() const;
+    int getGridHeight() const;
+    float getTileScale() const;
+    int getTileSize() const;
+    int getBaseSize() const;
 
     int tileOption_ = 0;
     TileID tileGroupOption_ = TileID::Grass;
@@ -42,9 +45,14 @@ public:
         bool isSolid;
     };
 
-    int tileSize_ = 16;
-    int matrixWidth_ = 512;
-    int matrixHeight_ = 512;
     std::array<TileGroup, math::toIndex(TileID::Count)> tileGroups_;
+
+private:
+
+    float tileScale_ = 7.f;
+    int baseSize_ = 16;
+    int tileSize_ = baseSize_ * tileScale_;
+    int gridWidth_ = 256;
+    int gridHeight_ = 256;
     std::vector<Tile> tiles_;
 };

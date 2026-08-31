@@ -4,6 +4,7 @@
 #include "AssetManager.hpp"
 #include "TileManager.hpp"
 #include "Renderer.hpp"
+#include "Camera.hpp"
 
 class Game {
 
@@ -24,8 +25,8 @@ public:
     void run();
 
 private:
-    void updatePlay(float deltaTime);
-    void updateLevelEditor(float deltaTime);
+    void updatePlay(float dt);
+    void updateLevelEditor(float dt);
 
     void HandleInput();
     void handlePlayInput();
@@ -38,20 +39,16 @@ private:
     ScrollWheelInput scrollWheelInput_ = ScrollWheelInput::None;
 
     sf::RenderWindow window_;
-    sf::View camera_{};
+    Camera camera_{};
 
     AssetManager assetManager_{};
-    Renderer renderer_{assetManager_};
     TileManager tileManager_{};
+    Renderer renderer_{assetManager_, tileManager_.getTileScale(), tileManager_.getBaseSize()};
     World world_{};
 
-    sf::Vector2i mousePosWindow_;
-    sf::Vector2f mousePosView_;
+    sf::Vector2i mousePosWindow_{};
+    sf::Vector2f mousePosView_{};
 
-    float tileScale_ = 7.f;
-    int baseWidth_ = 16;
-    int baseHeight_ = 16;
-    int tileWidth_ = baseWidth_ * tileScale_;
-    int tileHeight_ = baseHeight_ * tileScale_;
+    sf::Vector2f cameraMovement_{};
 };
 

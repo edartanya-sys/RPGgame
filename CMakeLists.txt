@@ -18,6 +18,8 @@ add_executable(RPGgame
         src/MovementSystem.cpp
         src/EnemyAISystem.cpp
         src/CollisionSystem.cpp
+        src/CombatSystem.cpp
+        src/Camera.cpp
 )
 
 target_include_directories(RPGgame PRIVATE
@@ -25,7 +27,7 @@ target_include_directories(RPGgame PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# КРИТИЧЕСКИ ВАЖНО: отключает __declspec(dllimport) в заголовках SFML
+# важно: отключает __declspec(dllimport) в заголовках SFML
 target_compile_definitions(RPGgame PRIVATE SFML_STATIC)
 
 target_link_libraries(RPGgame PRIVATE
