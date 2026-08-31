@@ -33,6 +33,7 @@ private:
     ComponentStorage<ChaseComponent> chaseComponents_{};
     ComponentStorage<PatrolComponent> patrolComponents_{};
     ComponentStorage<HealthComponent> healths_{};
+    ComponentStorage<Invulnerability> invulnerabilities_{};
 };
 
 extern template void World::addComponent<Position>(Entity, Position);
@@ -44,3 +45,4 @@ extern template void World::addComponent<Enemy>(Entity, Enemy);
 extern template void World::addComponent<ChaseComponent>(Entity, ChaseComponent);
 extern template void World::addComponent<PatrolComponent>(Entity, PatrolComponent);
 extern template void World::addComponent<HealthComponent>(Entity, HealthComponent);
+extern template void World::addComponent<Invulnerability>(Entity, Invulnerability);

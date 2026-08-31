@@ -76,6 +76,9 @@ ComponentStorage<T>& World::storage() {
     else if constexpr (std::is_same_v<T, HealthComponent>) {
         return healths_;
     }
+    else if constexpr (std::is_same_v<T, Invulnerability>) {
+        return invulnerabilities_;
+    }
     else {
         static_assert(alwaysFalse<T>, "This component type is not registered in World");
     }
@@ -90,3 +93,4 @@ template void World::addComponent<Enemy>(Entity, Enemy);
 template void World::addComponent<ChaseComponent>(Entity, ChaseComponent);
 template void World::addComponent<PatrolComponent>(Entity, PatrolComponent);
 template void World::addComponent<HealthComponent>(Entity, HealthComponent);
+template void World::addComponent<Invulnerability>(Entity, Invulnerability);

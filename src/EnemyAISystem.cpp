@@ -31,7 +31,6 @@ namespace systems {
                 playerPos - positions.get(enemy).value);
 
             velocities.get(enemy).vector = direction;
-            std::cout << direction.x << ' ' << direction.y << '\n';
         }
     }
 }

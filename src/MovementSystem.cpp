@@ -1,6 +1,7 @@
 #include "MovementSystem.hpp"
 #include "World.hpp"
 #include "Components.hpp"
+#include "MathFunctions.hpp"
 
 namespace systems {
 
@@ -18,7 +19,7 @@ namespace systems {
 
             Position &pos = positions.get(entity);
             Velocity &velocity = velocities.get(entity);
-            pos.value += velocity.vector * velocity.speed * dt;
+            pos.value += math::normalize(velocity.vector) * velocity.speed * dt;
         }
     }
 }

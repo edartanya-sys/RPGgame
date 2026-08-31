@@ -56,3 +56,4 @@ template class ComponentStorage<Enemy>;
 template class ComponentStorage<ChaseComponent>;
 template class ComponentStorage<PatrolComponent>;
 template class ComponentStorage<HealthComponent>;
+template class ComponentStorage<Invulnerability>;

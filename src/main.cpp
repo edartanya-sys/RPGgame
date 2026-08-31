@@ -1,4 +1,3 @@
-#include <memory>
 #include "Game.hpp"
 
 int main() {

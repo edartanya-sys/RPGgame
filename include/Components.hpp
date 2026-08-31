@@ -33,3 +33,7 @@ struct PatrolComponent {
 struct HealthComponent {
     int value;
 };
+
+struct Invulnerability {
+    float timeLeft;
+};
